@@ -1,10 +1,12 @@
 # 🌌 Nebula Nexus - AI Trivia
 
-![Status](https://img.shields.io/badge/Status-Active-cyan?style=for-the-badge)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Click_Here-FF6B6B?style=for-the-badge&logo=netlify&logoColor=white)](https://1st-sem-project.netlify.app)
 ![HTML5](https://img.shields.io/badge/html5-%23E34F26.svg?style=for-the-badge&logo=html5&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
 
 **Nebula Nexus** is a futuristic, sci-fi-themed trivia application powered by **Google Gemini AI**. Unlike traditional trivia games with static databases, Nebula Nexus generates unique questions on the fly based on *any* topic the user inputs.
+
+### 🚀 **Play Now:** [1st-sem-project.netlify.app](https://1st-sem-project.netlify.app)
 
 > "Your neural network performance has been analyzed."
 
@@ -68,25 +70,4 @@ To use the AI generation features, the app requires a Google Gemini API key.
 
 1.  Get a free API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
 2.  Open **Nebula Nexus** in your browser.
-3.  Click the **Settings Gear (⚙️)** in the top right corner.
-4.  Paste your API Key and click **Save**.
-    * *Note: The key is stored locally in your browser (localStorage) and is never sent to any server other than Google's API.*
-
----
-
-## 🧠 How It Works
-
-1.  **Input:** The user enters a topic (e.g., "Quantum Physics").
-2.  **Prompt Engineering:** The app constructs a specific prompt asking Gemini to return a strict JSON array containing questions, options, and the correct answer index.
-3.  **Parsing:** The response is parsed using JavaScript, and if valid, the game begins.
-4.  **Error Handling:** If the AI is hallucinating non-JSON text or the network fails, the app seamlessly switches to a hardcoded fallback set of questions.
-
----
-
-## 📄 License
-
-This project is open source.
-
----
-
-*Built with 💻 and ☕ by Anirudh*
+3.  Click the **Settings Gear (⚙️)** in the top right
