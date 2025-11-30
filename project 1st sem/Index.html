@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nebula Nexus - AI Trivia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap');
+
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-pink: #bc13fe;
+            --deep-space: #050b14;
+            --glass-bg: rgba(16, 23, 42, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: var(--deep-space);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(188, 19, 254, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(0, 243, 255, 0.1) 0%, transparent 20%);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Animated Background Stars */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Glassmorphism Card */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Typography */
+        h1, h2, .orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Custom Animations */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 243, 255, 0.2); }
+            50% { box-shadow: 0 0 25px rgba(0, 243, 255, 0.6); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .btn-neon {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-neon::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .btn-neon:hover::before {
+            left: 100%;
+        }
+
+        .btn-neon:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+            border-color: var(--neon-blue);
+        }
+
+        .btn-neon:active {
+            transform: scale(0.98);
+        }
+
+        /* Answer Options */
+        .option-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--neon-blue);
+            padding-left: 1.5rem;
+        }
+
+        .option-btn.correct {
+            background: rgba(34, 197, 94, 0.2) !important;
+            border-color: #22c55e !important;
+            color: #4ade80;
+        }
+
+        .option-btn.wrong {
+            background: rgba(239, 68, 68, 0.2) !important;
+            border-color: #ef4444 !important;
+            color: #f87171;
+        }
+
+        /* Loader */
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 3px solid #FFF;
+            border-radius: 50%;
+            display: inline-block;
+            position: relative;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        .loader::after {
+            content: '';  
+            box-sizing: border-box;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-bottom-color: var(--neon-pink);
+        }
+        
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Fade Transitions */
+        .fade-enter {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        .fade-enter-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 300ms, transform 300ms;
+        }
+        .fade-exit {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .fade-exit-active {
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 300ms, transform 300ms;
+        }
+
+        .hidden-section {
+            display: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+
+    <canvas id="starfield" class="stars"></canvas>
+
+    <!-- App Container -->
+    <div class="relative w-full max-w-2xl">
+        
+        <!-- Decoration Orbs -->
+        <div class="absolute -top-20 -left-20 w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+        <div class="absolute -bottom-20 -right-20 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" style="animation-delay: 1s;"></div>
+
+        <!-- Main Interface -->
+        <div id="app-card" class="glass-panel rounded-3xl p-8 relative overflow-hidden min-h-[500px] flex flex-col items-center justify-center">
+            
+            <!-- Settings / API Key Modal Trigger -->
+            <button id="settings-btn" class="absolute top-4 right-4 text-white/50 hover:text-white transition z-10">
+                <i class="fa-solid fa-gear"></i>
+            </button>
+
+            <!-- 1. Start Screen -->
+            <div id="start-screen" class="text-center w-full max-w-md space-y-8">
+                <div class="mb-6 animate-float">
+                    <i class="fa-solid fa-brain text-6xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 mb-4"></i>
+                    <h1 class="text-5xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">NEBULA<br>NEXUS</h1>
+                    <p class="text-cyan-300 tracking-[0.3em] text-sm mt-2">AI POWERED KNOWLEDGE ENGINE</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="relative group">
+                        <input type="text" id="topic-input" placeholder="Enter a topic (e.g., Space, History, JS)" 
+                            class="w-full bg-black/30 border border-white/10 rounded-xl px-6 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 transition-all text-center text-lg">
+                        <div class="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-500 opacity-0 group-hover:opacity-20 transition-opacity pointer-events-none"></div>
+                    </div>
+
+                    <button id="start-btn" class="btn-neon w-full bg-gradient-to-r from-cyan-600 to-blue-600 py-4 rounded-xl font-bold text-lg tracking-wider hover:shadow-[0_0_30px_rgba(8,145,178,0.5)]">
+                        INITIALIZE QUIZ
+                    </button>
+                    
+                    <button id="lucky-btn" class="w-full py-2 text-sm text-gray-400 hover:text-white transition">
+                        I'm feeling lucky (Random)
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. Loading Screen -->
+            <div id="loading-screen" class="hidden-section flex-col items-center justify-center text-center">
+                <span class="loader mb-6"></span>
+                <h2 class="text-2xl font-bold orbitron animate-pulse">CONTACTING AI CORE...</h2>
+                <p id="loading-text" class="text-gray-400 mt-2">Generating neural pathways</p>
+            </div>
+
+            <!-- 3. Quiz Screen -->
+            <div id="quiz-screen" class="hidden-section w-full">
+                <!-- Header -->
+                <div class="flex justify-between items-center mb-8 pb-4 border-b border-white/10">
+                    <div>
+                        <span class="text-xs text-cyan-400 tracking-widest uppercase">Question</span>
+                        <div class="text-2xl font-bold orbitron">
+                            <span id="current-q-num">1</span>
+                            <span class="text-gray-600 text-lg" id="total-count">/15</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-purple-400 tracking-widest uppercase">Score</span>
+                        <div class="text-2xl font-bold orbitron" id="score-display">0</div>
+                    </div>
+                </div>
+
+                <!-- Question -->
+                <div class="mb-8 min-h-[100px] flex items-center justify-center">
+                    <h2 id="question-text" class="text-2xl md:text-3xl font-medium text-center leading-relaxed">
+                        <!-- Question goes here -->
+                    </h2>
+                </div>
+
+                <!-- Options -->
+                <div id="options-container" class="grid grid-cols-1 gap-4">
+                    <!-- Options injected here -->
+                </div>
+            </div>
+
+            <!-- 4. Result Screen -->
+            <div id="result-screen" class="hidden-section text-center w-full">
+                <div class="mb-8 relative inline-block">
+                    <svg class="w-40 h-40 transform -rotate-90">
+                        <circle cx="80" cy="80" r="70" stroke="currentColor" stroke-width="10" fill="transparent" class="text-gray-800" />
+                        <circle id="score-circle" cx="80" cy="80" r="70" stroke="currentColor" stroke-width="10" fill="transparent" class="text-cyan-500" stroke-dasharray="440" stroke-dashoffset="440" style="transition: stroke-dashoffset 1s ease-out;" />
+                    </svg>
+                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                        <span id="final-score" class="text-4xl font-bold orbitron block">0</span>
+                        <span class="text-xs text-gray-400 uppercase">Points</span>
+                    </div>
+                </div>
+
+                <h2 id="result-title" class="text-3xl font-bold mb-2 orbitron">MISSION COMPLETE</h2>
+                <p id="result-msg" class="text-gray-400 mb-8 max-w-xs mx-auto">Your neural network performance has been analyzed.</p>
+
+                <div class="flex flex-col gap-3">
+                    <button id="replay-btn" class="btn-neon w-full bg-white text-black py-4 rounded-xl font-bold text-lg tracking-wider hover:bg-gray-200">
+                        PLAY AGAIN
+                    </button>
+                    <button id="new-topic-btn" class="w-full py-3 rounded-xl border border-white/20 hover:bg-white/5 transition">
+                        New Topic
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Error State -->
+            <div id="error-screen" class="hidden-section text-center max-w-md">
+                <i class="fa-solid fa-triangle-exclamation text-5xl text-red-500 mb-4"></i>
+                <h3 class="text-xl font-bold mb-2">System Failure</h3>
+                <p id="error-msg" class="text-gray-400 mb-6">Could not connect to the mainframe.</p>
+                <button onclick="location.reload()" class="px-6 py-2 bg-red-500/20 border border-red-500 rounded hover:bg-red-500/40 transition">Reboot System</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- API Key Modal -->
+    <div id="api-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+        <div class="glass-panel p-6 rounded-2xl max-w-md w-full m-4">
+            <h3 class="text-xl font-bold orbitron mb-4">Settings</h3>
+            <p class="text-sm text-gray-400 mb-4">Enter Gemini API Key (optional if provided by environment).</p>
+            <input type="password" id="api-key-input" class="w-full bg-black/50 border border-white/20 rounded p-3 text-white mb-4 focus:border-cyan-400 outline-none" placeholder="AIzaSy...">
+            <div class="flex justify-end gap-2">
+                <button id="close-modal" class="px-4 py-2 hover:bg-white/10 rounded">Close</button>
+                <button id="save-key" class="px-4 py-2 bg-cyan-600 rounded hover:bg-cyan-500">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration & State ---
+        // INSTRUCTION: API Key variable.
+        const apiKey = "AIzaSyA8HfqFlOZ10P9hxcPje2EmHE0vYstJdjI"; 
+        
+        let userApiKey = localStorage.getItem('gemini_api_key') || "";
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let isAnswering = false;
+
+        // --- DOM Elements ---
+        const screens = {
+            start: document.getElementById('start-screen'),
+            loading: document.getElementById('loading-screen'),
+            quiz: document.getElementById('quiz-screen'),
+            result: document.getElementById('result-screen'),
+            error: document.getElementById('error-screen')
+        };
+        
+        // --- Starfield Animation ---
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        class Star {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.z = Math.random() * 2 + 0.5; // Depth
+                this.size = Math.random() * 1.5;
+                this.opacity = Math.random();
+                this.speed = Math.random() * 0.2 + 0.05;
+            }
+            update() {
+                this.y -= this.speed * this.z; // Parallax effect
+                if (this.y < 0) this.reset();
+                this.opacity = 0.5 + Math.sin(Date.now() * 0.001 * this.z) * 0.5;
+            }
+            draw() {
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initStars() {
+            resizeCanvas();
+            stars = Array(150).fill().map(() => new Star());
+            animateStars();
+        }
+
+        function animateStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(star => {
+                star.update();
+                star.draw();
+            });
+            requestAnimationFrame(animateStars);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        initStars();
+
+        // --- Game Logic ---
+
+        function showScreen(screenName) {
+            Object.values(screens).forEach(el => {
+                el.classList.add('hidden-section');
+                el.classList.remove('fade-enter-active');
+            });
+            
+            const target = screens[screenName];
+            target.classList.remove('hidden-section');
+            target.classList.add('fade-enter');
+            
+            // Trigger reflow
+            void target.offsetWidth;
+            
+            target.classList.add('fade-enter-active');
+        }
+
+        async function fetchQuestions(topic) {
+            showScreen('loading');
+            
+            // Loading messages rotation
+            const messages = ["Scanning database...", "Consulting AI oracle...", "Formulating trivia...", "Calibrating difficulty..."];
+            let msgIdx = 0;
+            const msgInterval = setInterval(() => {
+                document.getElementById('loading-text').innerText = messages[msgIdx++ % messages.length];
+            }, 800);
+
+            const activeKey = userApiKey || apiKey;
+            
+            const prompt = `Generate 15 multiple choice trivia questions about "${topic}". 
+            Output strictly valid JSON. 
+            Format: Array of objects with keys: "question" (string), "options" (array of 4 strings), "answer" (integer index 0-3 of correct option).
+            Do not include markdown formatting like \`\`\`json. Just the raw array.`;
+
+            try {
+                const response = await callGeminiWithBackoff(activeKey, prompt);
+                clearInterval(msgInterval);
+                
+                // ROBUST JSON EXTRACTION:
+                // Use regex to find the first opening '[' and the last closing ']'
+                // This ignores any "Here is your JSON" text from the model.
+                const jsonMatch = response.match(/\[[\s\S]*\]/);
+                if (!jsonMatch) throw new Error("No JSON found in response");
+                
+                currentQuestions = JSON.parse(jsonMatch[0]);
+                
+                // Double check we got an array
+                if (!Array.isArray(currentQuestions)) throw new Error("Response was not an array");
+                
+                startGame();
+            } catch (error) {
+                clearInterval(msgInterval);
+                console.warn("API Error (Switching to Fallback):", error);
+                
+                // ALWAYS fallback on error, don't show error screen unless absolutely necessary
+                // This ensures the user can always play.
+                currentQuestions = getFallbackQuestions(topic);
+                startGame();
+            }
+        }
+
+        async function callGeminiWithBackoff(key, prompt, retries = 3) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`;
+            
+            if (!key) throw new Error("No API Key");
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }]
+            };
+
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    
+                    const data = await res.json();
+                    
+                    // Safety check for candidates
+                    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+                        throw new Error("Invalid API Response Structure");
+                    }
+                    
+                    return data.candidates[0].content.parts[0].text;
+                } catch (e) {
+                    if (i === retries - 1) throw e;
+                    await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+                }
+            }
+        }
+
+        function getFallbackQuestions(topic) {
+            // Mock data focused on HTML/JS as requested
+            const q = [
+                { question: "What does HTML stand for?", options: ["Hyper Text Markup Language", "High Tech Modern Language", "Hyperlinks and Text Markup Language", "Home Tool Markup Language"], answer: 0 },
+                { question: "Which HTML tag is used to define an internal style sheet?", options: ["<script>", "<css>", "<style>", "<link>"], answer: 2 },
+                { question: "Which property is used to change the background color in CSS?", options: ["color", "bgcolor", "background-color", "bg-color"], answer: 2 },
+                { question: "Inside which HTML element do we put the JavaScript?", options: ["<js>", "<scripting>", "<script>", "<javascript>"], answer: 2 },
+                { question: "How do you write 'Hello World' in an alert box?", options: ["msg('Hello World');", "alertBox('Hello World');", "alert('Hello World');", "msgBox('Hello World');"], answer: 2 },
+                { question: "How do you create a function in JavaScript?", options: ["function = myFunction()", "function:myFunction()", "function myFunction()", "create.function()"], answer: 2 },
+                { question: "How to write an IF statement in JavaScript?", options: ["if i = 5 then", "if i == 5 then", "if (i == 5)", "if i = 5"], answer: 2 },
+                { question: "How does a FOR loop start?", options: ["for (i = 0; i <= 5)", "for (i = 0; i <= 5; i++)", "for i = 1 to 5", "for (i <= 5; i++)"], answer: 1 },
+                { question: "What is the correct way to write a JavaScript array?", options: ["var colors = (1:'red', 2:'green', 3:'blue')", "var colors = ['red', 'green', 'blue']", "var colors = 'red', 'green', 'blue'", "var colors = 1 = ('red'), 2 = ('green'), 3 = ('blue')"], answer: 1 },
+                { question: "Which event occurs when the user clicks on an HTML element?", options: ["onchange", "onclick", "onmouseclick", "onmouseover"], answer: 1 },
+                { question: "How do you declare a JavaScript variable?", options: ["v carName;", "variable carName;", "var carName;", "val carName;"], answer: 2 },
+                { question: "Which operator is used to assign a value to a variable?", options: ["*", "-", "=", "x"], answer: 2 },
+                { question: "What will the following code return: Boolean(10 > 9)", options: ["NaN", "false", "true", "undefined"], answer: 2 },
+                { question: "Is JavaScript the same as Java?", options: ["Yes", "No", "Only in the browser", "Only on the server"], answer: 1 },
+                { question: "Which HTML attribute is used to define inline styles?", options: ["styles", "font", "class", "style"], answer: 3 }
+            ];
+            
+            // Shuffle fallback questions for randomness
+            return q.sort(() => Math.random() - 0.5);
+        }
+
+        function startGame() {
+            currentQuestionIndex = 0;
+            score = 0;
+            document.getElementById('score-display').innerText = '0';
+            // Update total count display dynamically
+            document.getElementById('total-count').innerText = '/' + currentQuestions.length;
+            showScreen('quiz');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const qData = currentQuestions[currentQuestionIndex];
+            
+            // Update UI
+            document.getElementById('current-q-num').innerText = currentQuestionIndex + 1;
+            document.getElementById('question-text').innerText = qData.question;
+            
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            
+            isAnswering = false;
+
+            qData.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn w-full text-left p-4 rounded-xl bg-white/5 text-lg font-medium relative overflow-hidden';
+                
+                // FIX: Escape HTML characters so tags like <style> show as text
+                const safeOpt = opt.replace(/&/g, "&amp;")
+                                   .replace(/</g, "&lt;")
+                                   .replace(/>/g, "&gt;")
+                                   .replace(/"/g, "&quot;")
+                                   .replace(/'/g, "&#039;");
+
+                btn.innerHTML = `<span class="opacity-50 mr-3 text-sm">${String.fromCharCode(65 + idx)}.</span> ${safeOpt}`;
+                btn.onclick = () => handleAnswer(idx, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(selectedIndex, btnElement) {
+            if (isAnswering) return;
+            isAnswering = true;
+
+            const qData = currentQuestions[currentQuestionIndex];
+            const correctIndex = qData.answer;
+            const allBtns = document.querySelectorAll('.option-btn');
+
+            // Visual Feedback
+            if (selectedIndex === correctIndex) {
+                btnElement.classList.add('correct');
+                score += 100;
+                document.getElementById('score-display').innerText = score;
+                // Add sparkle effect logic here if desired
+            } else {
+                btnElement.classList.add('wrong');
+                // Highlight correct one
+                allBtns[correctIndex].classList.add('correct');
+            }
+
+            // Disable all buttons
+            allBtns.forEach(b => b.disabled = true);
+
+            // Wait then next
+            setTimeout(() => {
+                currentQuestionIndex++;
+                if (currentQuestionIndex < currentQuestions.length) {
+                    renderQuestion();
+                } else {
+                    endGame();
+                }
+            }, 1500);
+        }
+
+        function endGame() {
+            showScreen('result');
+            
+            // Animate score
+            let currentScore = 0;
+            const scoreEl = document.getElementById('final-score');
+            const scoreCircle = document.getElementById('score-circle');
+            
+            // Calculate progress circle (440 is circumference)
+            const maxScore = currentQuestions.length * 100;
+            const percentage = score / maxScore;
+            const offset = 440 - (440 * percentage);
+            
+            // Set circle dash offset
+            setTimeout(() => {
+                scoreCircle.style.strokeDashoffset = offset;
+            }, 100);
+
+            // Count up animation
+            const interval = setInterval(() => {
+                if (currentScore >= score) {
+                    currentScore = score;
+                    clearInterval(interval);
+                }
+                scoreEl.innerText = currentScore;
+                currentScore += 5;
+            }, 20);
+
+            // Messages
+            const title = document.getElementById('result-title');
+            const msg = document.getElementById('result-msg');
+            
+            if (percentage >= 0.8) {
+                title.innerText = "COSMIC GENIUS";
+                title.className = "text-3xl font-bold mb-2 orbitron text-green-400";
+                msg.innerText = "Your knowledge rivals the ancient archives.";
+            } else if (percentage >= 0.5) {
+                title.innerText = "STAR COMMANDER";
+                title.className = "text-3xl font-bold mb-2 orbitron text-cyan-400";
+                msg.innerText = "Solid performance. Ready for interstellar travel.";
+            } else {
+                title.innerText = "CADET LEVEL";
+                title.className = "text-3xl font-bold mb-2 orbitron text-yellow-400";
+                msg.innerText = "More training required in the simulation chamber.";
+            }
+        }
+
+        // --- Event Listeners ---
+        
+        document.getElementById('start-btn').addEventListener('click', () => {
+            const topic = document.getElementById('topic-input').value.trim() || "Space Science";
+            fetchQuestions(topic);
+        });
+
+        document.getElementById('lucky-btn').addEventListener('click', () => {
+            const topics = ["Quantum Physics", "Ancient History", "Javascript", "Movies", "Geography", "Video Games"];
+            const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+            fetchQuestions(randomTopic);
+        });
+
+        document.getElementById('replay-btn').addEventListener('click', () => {
+            // Replay same questions? Or new ones? Let's do same topic new questions.
+            // For simplicity, restart game loop with same topic if we stored it, or just go to start.
+            // Let's go to start for UX choice.
+            showScreen('start');
+        });
+
+        document.getElementById('new-topic-btn').addEventListener('click', () => showScreen('start'));
+
+        // Settings Modal
+        const modal = document.getElementById('api-modal');
+        document.getElementById('settings-btn').addEventListener('click', () => {
+            modal.classList.remove('hidden');
+            document.getElementById('api-key-input').value = userApiKey;
+        });
+
+        document.getElementById('close-modal').addEventListener('click', () => modal.classList.add('hidden'));
+        
+        document.getElementById('save-key').addEventListener('click', () => {
+            userApiKey = document.getElementById('api-key-input').value.trim();
+            localStorage.setItem('gemini_api_key', userApiKey);
+            modal.classList.add('hidden');
+            alert("Key Saved!");
+        });
+
+        // Close modal on outside click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.classList.add('hidden');
+        });
+
+    </script>
+</body>
+</html>
